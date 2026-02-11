@@ -3,9 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hello World</title>
+    <title>Image Caption</title>
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-    <h1>Hello World</h1>
+    <div id="app">
+        <input type="file" id="upload" accept="image/*" multiple>
+        <div class="controls">
+            <input type="text" id="globalCaption" placeholder="Caption for all images">
+            <button id="applyAll">Apply to All</button>
+        </div>
+        <div id="images"></div>
+    </div>
+    <div id="modal" class="modal">
+        <img id="modalImg" src="" alt="">
+    </div>
+    <script type="module" src="/main.js"></script>
 </body>
 </html>
