@@ -42,10 +42,25 @@ globalCaption.addEventListener('input', (e) => {
     clearTimeout(globalDebounce);
     globalDebounce = setTimeout(() => {
         const caption = e.target.value;
-        imageItems.forEach(item => {
-            item.setLeftCaption(caption);
-        });
-    }, 300);
+        let index = 0;
+        
+        const processBatch = () => {
+            const batchSize = 10;
+            const end = Math.min(index + batchSize, imageItems.length);
+            
+            for (let i = index; i < end; i++) {
+                imageItems[i].setLeftCaption(caption);
+            }
+            
+            index = end;
+            
+            if (index < imageItems.length) {
+                setTimeout(processBatch, 0);
+            }
+        };
+        
+        processBatch();
+    }, 500);
 });
 
 upload.addEventListener('change', (e) => {
@@ -68,6 +83,77 @@ upload.addEventListener('change', (e) => {
 function createImageItem(img, filename) {
     const item = document.createElement('div');
     item.className = 'image-item';
+    
+    const removeBtn = document.createElement('button');
+    removeBtn.textContent = '×';
+    removeBtn.className = 'remove-btn';
+    removeBtn.addEventListener('click', () => {
+        const index = imageItems.findIndex(i => i.element === item);
+        if (index > -1) imageItems.splice(index, 1);
+        item.remove();
+        if (imageItems.length === 0) downloadAllBtn.disabled = true;
+    });
+    
+    const rotateBtn = document.createElement('button');
+    rotateBtn.textContent = '↻';
+    rotateBtn.className = 'rotate-btn';
+    
+    let rotation = 0;
+    const originalImg = img;
+    const rotatedImages = { 0: img };
+    
+    rotateBtn.addEventListener('click', () => {
+        rotation = (rotation + 90) % 360;
+        
+        if (rotatedImages[rotation]) {
+            img = rotatedImages[rotation];
+            thumbnail.src = img.src;
+            if (leftCaption || rightCaption) {
+                queueRender();
+            }
+            return;
+        }
+        
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        if (rotation === 90 || rotation === 270) {
+            tempCanvas.width = originalImg.height;
+            tempCanvas.height = originalImg.width;
+        } else {
+            tempCanvas.width = originalImg.width;
+            tempCanvas.height = originalImg.height;
+        }
+        
+        tempCtx.save();
+        
+        if (rotation === 90) {
+            tempCtx.translate(tempCanvas.width, 0);
+            tempCtx.rotate(90 * Math.PI / 180);
+        } else if (rotation === 180) {
+            tempCtx.translate(tempCanvas.width, tempCanvas.height);
+            tempCtx.rotate(180 * Math.PI / 180);
+        } else if (rotation === 270) {
+            tempCtx.translate(0, tempCanvas.height);
+            tempCtx.rotate(270 * Math.PI / 180);
+        }
+        
+        tempCtx.drawImage(originalImg, 0, 0);
+        tempCtx.restore();
+        
+        tempCanvas.toBlob((blob) => {
+            const newImg = new Image();
+            newImg.onload = () => {
+                rotatedImages[rotation] = newImg;
+                img = newImg;
+                thumbnail.src = newImg.src;
+                if (leftCaption || rightCaption) {
+                    queueRender();
+                }
+            };
+            newImg.src = URL.createObjectURL(blob);
+        });
+    });
     
     const title = document.createElement('div');
     title.textContent = filename;
@@ -101,10 +187,13 @@ function createImageItem(img, filename) {
     let rightCaption = '';
     let debounce;
     let currentBlob = null;
+    let renderQueued = false;
     
     const render = () => {
+        renderQueued = false;
+        
         const padding = 40;
-        const fontSize = 96;
+        const fontSize = Math.max(24, img.width * 0.03);
         const maxWidth = img.width * 0.5 - padding;
         
         ctx.font = `${fontSize}px sans-serif`;
@@ -150,6 +239,23 @@ function createImageItem(img, filename) {
         });
     };
     
+    const queueRender = () => {
+        if (!renderQueued) {
+            renderQueued = true;
+            requestAnimationFrame(render);
+        }
+    };
+    
+    const setLeftCaption = (caption) => {
+        leftCaption = caption;
+        queueRender();
+    };
+    
+    const setRightCaption = (caption) => {
+        rightCaption = caption;
+        queueRender();
+    };
+    
     const getLines = (ctx, text, maxWidth) => {
         const paragraphs = text.split('\n');
         const lines = [];
@@ -186,18 +292,7 @@ function createImageItem(img, filename) {
             download.click();
         }
     };
-    
     const getBlob = () => currentBlob;
-    
-    const setLeftCaption = (caption) => {
-        leftCaption = caption;
-        render();
-    };
-    
-    const setRightCaption = (caption) => {
-        rightCaption = caption;
-        render();
-    };
     
     input.addEventListener('input', (e) => {
         clearTimeout(debounce);
@@ -206,6 +301,8 @@ function createImageItem(img, filename) {
         }, 300);
     });
     
+    item.appendChild(removeBtn);
+    item.appendChild(rotateBtn);
     item.appendChild(title);
     item.appendChild(thumbnail);
     item.appendChild(rightTitle);
@@ -213,7 +310,14 @@ function createImageItem(img, filename) {
     item.appendChild(download);
     imagesContainer.appendChild(item);
     
-    const itemObj = { setLeftCaption, setRightCaption, download: triggerDownload, getBlob, filename: `captioned-${filename}` };
+    const itemObj = { 
+        setLeftCaption, 
+        setRightCaption, 
+        download: triggerDownload, 
+        getBlob, 
+        filename: `captioned-${filename}`, 
+        element: item
+    };
     imageItems.push(itemObj);
     return itemObj;
 }

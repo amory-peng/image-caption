@@ -39,6 +39,47 @@ body {
     padding: 1rem;
     display: flex;
     flex-direction: column;
+    position: relative;
+}
+
+.remove-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: #ff4444;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.remove-btn:hover {
+    background: #cc0000;
+}
+
+.rotate-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 3rem;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: #4444ff;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.rotate-btn:hover {
+    background: #0000cc;
 }
 
 .left-section, .right-section {
