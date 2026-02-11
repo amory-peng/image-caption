@@ -8,7 +8,11 @@
 </head>
 <body>
     <div id="app">
-        <input type="file" id="upload" accept="image/*" multiple webkitdirectory>
+        <div class="upload-options">
+            <button id="uploadFiles">Choose File</button>
+            <button id="uploadFolder">Choose Folder</button>
+        </div>
+        <input type="file" id="upload" accept="image/*" multiple style="display:none">
         <textarea id="globalCaption" placeholder="Caption for all images" rows="2"></textarea>
         <button id="downloadAll">Download All</button>
         <div id="images"></div>

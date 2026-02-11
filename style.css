@@ -11,6 +11,11 @@ body {
     gap: 1rem;
 }
 
+.upload-options {
+    display: flex;
+    gap: 0.5rem;
+}
+
 #downloadAll {
     width: fit-content;
     font-size: 0.875rem;

@@ -1,6 +1,8 @@
 import JSZip from 'jszip';
 
 const upload = document.getElementById('upload');
+const uploadFilesBtn = document.getElementById('uploadFiles');
+const uploadFolderBtn = document.getElementById('uploadFolder');
 const imagesContainer = document.getElementById('images');
 const globalCaption = document.getElementById('globalCaption');
 const downloadAllBtn = document.getElementById('downloadAll');
@@ -13,6 +15,16 @@ downloadAllBtn.disabled = true;
 
 modal.addEventListener('click', () => {
     modal.classList.remove('open');
+});
+
+uploadFilesBtn.addEventListener('click', () => {
+    upload.removeAttribute('webkitdirectory');
+    upload.click();
+});
+
+uploadFolderBtn.addEventListener('click', () => {
+    upload.setAttribute('webkitdirectory', '');
+    upload.click();
 });
 
 downloadAllBtn.addEventListener('click', async () => {
@@ -232,7 +244,7 @@ function createImageItem(img, filename) {
             currentBlob = blob;
             thumbnail.src = URL.createObjectURL(blob);
             download.href = thumbnail.src;
-            download.download = `captioned-${filename}`;
+            download.download = currentFilename;
             download.style.display = 'block';
             download.textContent = 'Download';
             downloadAllBtn.disabled = false;
@@ -255,7 +267,8 @@ function createImageItem(img, filename) {
     
     const setRightCaption = (caption) => {
         rightCaption = caption;
-        currentFilename = caption ? `${caption.replace(/[^a-z0-9]/gi, '_').substring(0, 50)}.png` : `captioned-${filename}`;
+        const ext = filename.split('.').pop();
+        currentFilename = caption ? `${caption.replace(/[^a-z0-9]/gi, '_').substring(0, 50)}.${ext}` : `captioned-${filename}`;
         download.download = currentFilename;
         title.textContent = currentFilename;
         queueRender();
