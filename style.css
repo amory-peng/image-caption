@@ -11,23 +11,43 @@ body {
     gap: 1rem;
 }
 
+#downloadAll {
+    width: fit-content;
+    font-size: 0.875rem;
+}
+
+#downloadAll:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#globalCaption {
+    resize: vertical;
+    font-family: inherit;
+    padding: 0.5rem;
+    max-width: 400px;
+}
+
 #images {
-    display: flex;
-    flex-direction: column;
-    gap: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1rem;
 }
 
 .image-item {
     border: 1px solid #ccc;
     padding: 1rem;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
+    display: flex;
+    flex-direction: column;
 }
 
 .left-section, .right-section {
     display: flex;
     flex-direction: column;
+}
+
+.right-section {
+    margin-top: 0.5rem;
 }
 
 .controls {
@@ -38,6 +58,17 @@ body {
 
 .controls input {
     flex: 1;
+}
+
+input[type="text"] {
+    width: 100%;
+}
+
+textarea {
+    resize: vertical;
+    font-family: inherit;
+    padding: 0.5rem;
+    width: 100%;
 }
 
 button {
@@ -56,7 +87,8 @@ a {
 
 img {
     cursor: pointer;
-    max-width: 200px;
+    max-width: 100%;
+    width: 100%;
 }
 
 .section-title {
