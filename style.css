@@ -89,6 +89,7 @@ img {
     cursor: pointer;
     max-width: 100%;
     width: 100%;
+    height: auto;
 }
 
 .section-title {
@@ -117,5 +118,7 @@ img {
 .modal img {
     max-width: 90%;
     max-height: 90%;
+    width: auto;
+    height: auto;
     cursor: default;
 }
