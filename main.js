@@ -246,6 +246,8 @@ function createImageItem(img, filename) {
         }
     };
     
+    let currentFilename = `captioned-${filename}`;
+    
     const setLeftCaption = (caption) => {
         leftCaption = caption;
         queueRender();
@@ -253,6 +255,8 @@ function createImageItem(img, filename) {
     
     const setRightCaption = (caption) => {
         rightCaption = caption;
+        currentFilename = caption ? `${caption.replace(/[^a-z0-9]/gi, '_').substring(0, 50)}.png` : `captioned-${filename}`;
+        download.download = currentFilename;
         queueRender();
     };
     
@@ -315,7 +319,7 @@ function createImageItem(img, filename) {
         setRightCaption, 
         download: triggerDownload, 
         getBlob, 
-        filename: `captioned-${filename}`, 
+        get filename() { return currentFilename; },
         element: item
     };
     imageItems.push(itemObj);
