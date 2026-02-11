@@ -257,6 +257,7 @@ function createImageItem(img, filename) {
         rightCaption = caption;
         currentFilename = caption ? `${caption.replace(/[^a-z0-9]/gi, '_').substring(0, 50)}.png` : `captioned-${filename}`;
         download.download = currentFilename;
+        title.textContent = currentFilename;
         queueRender();
     };
     
