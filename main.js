@@ -1,4 +1,5 @@
 import JSZip from 'jszip';
+import imageCompression from 'browser-image-compression';
 
 const upload = document.getElementById('upload');
 const uploadFilesBtn = document.getElementById('uploadFiles');
@@ -6,6 +7,8 @@ const uploadFolderBtn = document.getElementById('uploadFolder');
 const imagesContainer = document.getElementById('images');
 const globalCaption = document.getElementById('globalCaption');
 const downloadAllBtn = document.getElementById('downloadAll');
+const compressingIndicator = document.getElementById('compressing');
+const fileList = document.getElementById('fileList');
 const modal = document.getElementById('modal');
 const modalImg = document.getElementById('modalImg');
 
@@ -75,24 +78,57 @@ globalCaption.addEventListener('input', (e) => {
     }, 500);
 });
 
-upload.addEventListener('change', (e) => {
-    Array.from(e.target.files).forEach(file => {
+upload.addEventListener('change', async (e) => {
+    const files = Array.from(e.target.files).filter(file => 
+        file.type.startsWith('image/')
+    );
+    
+    if (files.length === 0) return;
+    
+    compressingIndicator.style.display = 'block';
+    
+    fileList.innerHTML = '';
+    
+    for (const file of files) {
+        const listItem = document.createElement('div');
+        listItem.innerHTML = `<span class="spinner">⏳</span> ${file.name}`;
+        listItem.dataset.originalName = file.name;
+        fileList.appendChild(listItem);
+        
+        let processedFile = file;
+        
+        if (file.size > 1024 * 1024) {
+            try {
+                processedFile = await imageCompression(file, {
+                    maxSizeMB: 1,
+                    useWebWorker: true
+                });
+            } catch (e) {
+                console.error('Compression failed:', e);
+            }
+        }
+        
+        listItem.querySelector('.spinner').textContent = '✓';
+        
         const reader = new FileReader();
         reader.onload = (event) => {
             const img = new Image();
             img.onload = () => {
-                const itemObj = createImageItem(img, file.name);
+                const itemObj = createImageItem(img, file.name, processedFile.size, listItem);
                 if (globalCaption.value) {
                     itemObj.setLeftCaption(globalCaption.value);
                 }
             };
             img.src = event.target.result;
         };
-        reader.readAsDataURL(file);
-    });
+        reader.readAsDataURL(processedFile);
+    }
+    
+    compressingIndicator.style.display = 'none';
+    downloadAllBtn.disabled = false;
 });
 
-function createImageItem(img, filename) {
+function createImageItem(img, filename, originalSize, listItem) {
     const item = document.createElement('div');
     item.className = 'image-item';
     
@@ -172,6 +208,12 @@ function createImageItem(img, filename) {
     title.style.fontWeight = 'bold';
     title.style.marginBottom = '0.5rem';
     
+    const filesize = document.createElement('div');
+    filesize.style.fontSize = '0.875rem';
+    filesize.style.color = '#666';
+    filesize.style.marginBottom = '0.5rem';
+    filesize.textContent = `${(originalSize / (1024 * 1024)).toFixed(2)} MB`;
+    
     const thumbnail = document.createElement('img');
     thumbnail.src = img.src;
     thumbnail.style.marginBottom = '0.5rem';
@@ -240,15 +282,17 @@ function createImageItem(img, filename) {
             drawLines(ctx, rightLines, canvas.width - padding, img.height + captionHeight / 2, fontSize);
         }
         
-        canvas.toBlob((blob) => {
+        canvas.toBlob(async (blob) => {
+            const sizeMB = (blob.size / (1024 * 1024)).toFixed(2);
+            filesize.textContent = `${sizeMB} MB`;
+            
             currentBlob = blob;
             thumbnail.src = URL.createObjectURL(blob);
             download.href = thumbnail.src;
             download.download = currentFilename;
             download.style.display = 'block';
             download.textContent = 'Download';
-            downloadAllBtn.disabled = false;
-        });
+        }, 'image/jpeg', 0.9);
     };
     
     const queueRender = () => {
@@ -267,10 +311,13 @@ function createImageItem(img, filename) {
     
     const setRightCaption = (caption) => {
         rightCaption = caption;
-        const ext = filename.split('.').pop();
-        currentFilename = caption ? `${caption.replace(/[^a-z0-9]/gi, '_').substring(0, 50)}.${ext}` : `captioned-${filename}`;
+        currentFilename = caption ? `${caption.replace(/[^a-z0-9]/gi, '_').substring(0, 50)}.jpg` : `captioned-${filename.replace(/\.[^.]+$/, '.jpg')}`;
         download.download = currentFilename;
         title.textContent = currentFilename;
+        if (listItem) {
+            const spinner = listItem.querySelector('.spinner');
+            listItem.innerHTML = `${spinner ? spinner.outerHTML : ''} ${currentFilename}`;
+        }
         queueRender();
     };
     
@@ -322,6 +369,7 @@ function createImageItem(img, filename) {
     item.appendChild(removeBtn);
     item.appendChild(rotateBtn);
     item.appendChild(title);
+    item.appendChild(filesize);
     item.appendChild(thumbnail);
     item.appendChild(rightTitle);
     item.appendChild(input);

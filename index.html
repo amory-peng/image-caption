@@ -8,13 +8,17 @@
 </head>
 <body>
     <div id="app">
-        <div class="upload-options">
-            <button id="uploadFiles">Choose File</button>
-            <button id="uploadFolder">Choose Folder</button>
+        <div class="sticky-header">
+            <div class="upload-options">
+                <button id="uploadFiles">Choose File</button>
+                <button id="uploadFolder">Choose Folder</button>
+            </div>
+            <input type="file" id="upload" accept="image/*" multiple style="display:none">
+            <div id="compressing" style="display:none; color: #666;">Compressing images...</div>
+            <textarea id="globalCaption" placeholder="Caption for all images" rows="2"></textarea>
+            <button id="downloadAll">Download All</button>
+            <div id="fileList"></div>
         </div>
-        <input type="file" id="upload" accept="image/*" multiple style="display:none">
-        <textarea id="globalCaption" placeholder="Caption for all images" rows="2"></textarea>
-        <button id="downloadAll">Download All</button>
         <div id="images"></div>
     </div>
     <div id="modal" class="modal">
