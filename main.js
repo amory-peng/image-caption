@@ -37,6 +37,7 @@ downloadAllBtn.addEventListener('click', async () => {
     const zip = new JSZip();
     
     for (const item of imageItems) {
+        if (!item) continue;
         const blob = await item.getBlob();
         if (blob) {
             zip.file(item.filename, blob);
@@ -89,10 +90,12 @@ upload.addEventListener('change', async (e) => {
     
     fileList.innerHTML = '';
     
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         const listItem = document.createElement('div');
         listItem.innerHTML = `<span class="spinner">⏳</span> ${file.name}`;
         listItem.dataset.originalName = file.name;
+        listItem.dataset.order = i;
         fileList.appendChild(listItem);
         
         let processedFile = file;
@@ -111,26 +114,31 @@ upload.addEventListener('change', async (e) => {
         listItem.querySelector('.spinner').textContent = '✓';
         
         const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = () => {
-                const itemObj = createImageItem(img, file.name, processedFile.size, listItem);
-                if (globalCaption.value) {
-                    itemObj.setLeftCaption(globalCaption.value);
-                }
+        const loadPromise = new Promise((resolve) => {
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    const itemObj = createImageItem(img, file.name, processedFile.size, listItem, i);
+                    if (globalCaption.value) {
+                        itemObj.setLeftCaption(globalCaption.value);
+                    }
+                    resolve();
+                };
+                img.src = event.target.result;
             };
-            img.src = event.target.result;
-        };
+        });
         reader.readAsDataURL(processedFile);
+        await loadPromise;
     }
     
     compressingIndicator.style.display = 'none';
     downloadAllBtn.disabled = false;
 });
 
-function createImageItem(img, filename, originalSize, listItem) {
+function createImageItem(img, filename, originalSize, listItem, order) {
     const item = document.createElement('div');
     item.className = 'image-item';
+    item.style.order = order;
     
     const removeBtn = document.createElement('button');
     removeBtn.textContent = '×';
@@ -382,8 +390,9 @@ function createImageItem(img, filename, originalSize, listItem) {
         download: triggerDownload, 
         getBlob, 
         get filename() { return currentFilename; },
-        element: item
+        element: item,
+        order: order
     };
-    imageItems.push(itemObj);
+    imageItems[order] = itemObj;
     return itemObj;
 }
