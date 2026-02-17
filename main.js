@@ -118,7 +118,7 @@ upload.addEventListener('change', async (e) => {
             reader.onload = (event) => {
                 const img = new Image();
                 img.onload = () => {
-                    const itemObj = createImageItem(img, file.name, processedFile.size, listItem, i);
+                    const itemObj = createImageItem(img, file.name, processedFile.size, listItem, i, processedFile);
                     if (globalCaption.value) {
                         itemObj.setLeftCaption(globalCaption.value);
                     }
@@ -135,7 +135,7 @@ upload.addEventListener('change', async (e) => {
     downloadAllBtn.disabled = false;
 });
 
-function createImageItem(img, filename, originalSize, listItem, order) {
+function createImageItem(img, filename, originalSize, listItem, order, originalFile) {
     const item = document.createElement('div');
     item.className = 'image-item';
     item.style.order = order;
@@ -365,7 +365,7 @@ function createImageItem(img, filename, originalSize, listItem, order) {
             download.click();
         }
     };
-    const getBlob = () => currentBlob;
+    const getBlob = () => currentBlob || originalFile;
     
     input.addEventListener('input', (e) => {
         clearTimeout(debounce);
