@@ -11,6 +11,16 @@ const compressingIndicator = document.getElementById('compressing');
 const fileList = document.getElementById('fileList');
 const modal = document.getElementById('modal');
 const modalImg = document.getElementById('modalImg');
+const cropModal = document.getElementById('cropModal');
+const cropCanvas = document.getElementById('cropCanvas');
+const cropApply = document.getElementById('cropApply');
+const cropCancel = document.getElementById('cropCancel');
+
+let currentCropItem = null;
+let cropStart = null;
+let cropEnd = null;
+let cropRect = null;
+let cropBaseImageData = null;
 
 const imageItems = [];
 
@@ -19,6 +29,94 @@ downloadAllBtn.disabled = true;
 modal.addEventListener('click', () => {
     modal.classList.remove('open');
 });
+
+cropCancel.addEventListener('click', () => {
+    cropModal.classList.remove('open');
+    currentCropItem = null;
+    cropStart = null;
+    cropEnd = null;
+    cropRect = null;
+    cropBaseImageData = null;
+});
+
+cropCanvas.addEventListener('click', (e) => {
+    const rect = cropCanvas.getBoundingClientRect();
+    const scaleX = cropCanvas.width / rect.width;
+    const scaleY = cropCanvas.height / rect.height;
+    const point = {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+    };
+    
+    if (!cropStart) {
+        cropStart = point;
+    } else if (!cropRect) {
+        cropEnd = point;
+        const scaleX = currentCropItem.img.width / cropCanvas.width;
+        const scaleY = currentCropItem.img.height / cropCanvas.height;
+        cropRect = {
+            x: Math.min(cropStart.x, cropEnd.x) * scaleX,
+            y: Math.min(cropStart.y, cropEnd.y) * scaleY,
+            width: Math.abs(cropEnd.x - cropStart.x) * scaleX,
+            height: Math.abs(cropEnd.y - cropStart.y) * scaleY
+        };
+    } else {
+        cropStart = point;
+        cropEnd = null;
+        cropRect = null;
+        const ctx = cropCanvas.getContext('2d');
+        ctx.putImageData(cropBaseImageData, 0, 0);
+    }
+});
+
+cropCanvas.addEventListener('mousemove', (e) => {
+    if (!cropStart || cropRect) return;
+    const rect = cropCanvas.getBoundingClientRect();
+    const scaleX = cropCanvas.width / rect.width;
+    const scaleY = cropCanvas.height / rect.height;
+    cropEnd = {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY
+    };
+    drawCropPreview();
+});
+
+cropApply.addEventListener('click', () => {
+    if (currentCropItem && cropRect) {
+        currentCropItem.applyCrop(cropRect);
+        cropModal.classList.remove('open');
+        currentCropItem = null;
+        cropStart = null;
+        cropEnd = null;
+        cropRect = null;
+        cropBaseImageData = null;
+    }
+});
+
+function drawCropPreview() {
+    if (!currentCropItem || !cropStart || !cropEnd) return;
+    const ctx = cropCanvas.getContext('2d');
+    
+    ctx.putImageData(cropBaseImageData, 0, 0);
+    
+    const x = Math.min(cropStart.x, cropEnd.x);
+    const y = Math.min(cropStart.y, cropEnd.y);
+    const width = Math.abs(cropEnd.x - cropStart.x);
+    const height = Math.abs(cropEnd.y - cropStart.y);
+    
+    ctx.clearRect(x, y, width, height);
+    ctx.drawImage(currentCropItem.img, 
+        x * (currentCropItem.img.width / cropCanvas.width),
+        y * (currentCropItem.img.height / cropCanvas.height),
+        width * (currentCropItem.img.width / cropCanvas.width),
+        height * (currentCropItem.img.height / cropCanvas.height),
+        x, y, width, height
+    );
+    
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x, y, width, height);
+}
 
 uploadFilesBtn.addEventListener('click', () => {
     upload.removeAttribute('webkitdirectory');
@@ -154,6 +252,10 @@ function createImageItem(img, filename, originalSize, listItem, order, originalF
     rotateBtn.textContent = '↻';
     rotateBtn.className = 'rotate-btn';
     
+    const cropBtn = document.createElement('button');
+    cropBtn.textContent = '✂';
+    cropBtn.className = 'crop-btn';
+    
     let rotation = 0;
     const originalImg = img;
     const rotatedImages = { 0: img };
@@ -170,31 +272,17 @@ function createImageItem(img, filename, originalSize, listItem, order, originalF
             return;
         }
         
+        const baseImg = rotatedImages[(rotation - 90 + 360) % 360] || img;
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
         
-        if (rotation === 90 || rotation === 270) {
-            tempCanvas.width = originalImg.height;
-            tempCanvas.height = originalImg.width;
-        } else {
-            tempCanvas.width = originalImg.width;
-            tempCanvas.height = originalImg.height;
-        }
+        tempCanvas.width = baseImg.height;
+        tempCanvas.height = baseImg.width;
         
         tempCtx.save();
-        
-        if (rotation === 90) {
-            tempCtx.translate(tempCanvas.width, 0);
-            tempCtx.rotate(90 * Math.PI / 180);
-        } else if (rotation === 180) {
-            tempCtx.translate(tempCanvas.width, tempCanvas.height);
-            tempCtx.rotate(180 * Math.PI / 180);
-        } else if (rotation === 270) {
-            tempCtx.translate(0, tempCanvas.height);
-            tempCtx.rotate(270 * Math.PI / 180);
-        }
-        
-        tempCtx.drawImage(originalImg, 0, 0);
+        tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+        tempCtx.rotate(90 * Math.PI / 180);
+        tempCtx.drawImage(baseImg, -baseImg.width / 2, -baseImg.height / 2);
         tempCtx.restore();
         
         tempCanvas.toBlob((blob) => {
@@ -367,6 +455,42 @@ function createImageItem(img, filename, originalSize, listItem, order, originalF
     };
     const getBlob = () => currentBlob || originalFile;
     
+    const applyCrop = (rect) => {
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCanvas.width = rect.width;
+        tempCanvas.height = rect.height;
+        tempCtx.drawImage(img, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width, rect.height);
+        
+        tempCanvas.toBlob((blob) => {
+            const newImg = new Image();
+            newImg.onload = () => {
+                img = newImg;
+                rotation = 0;
+                Object.keys(rotatedImages).forEach(key => delete rotatedImages[key]);
+                rotatedImages[0] = newImg;
+                thumbnail.src = newImg.src;
+                queueRender();
+            };
+            newImg.src = URL.createObjectURL(blob);
+        });
+    };
+    
+    cropBtn.addEventListener('click', () => {
+        currentCropItem = { img, applyCrop };
+        cropCanvas.width = Math.min(img.width, 800);
+        cropCanvas.height = (img.height / img.width) * cropCanvas.width;
+        const ctx = cropCanvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, cropCanvas.width, cropCanvas.height);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        ctx.fillRect(0, 0, cropCanvas.width, cropCanvas.height);
+        cropBaseImageData = ctx.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
+        cropModal.classList.add('open');
+        cropStart = null;
+        cropEnd = null;
+        cropRect = null;
+    });
+    
     input.addEventListener('input', (e) => {
         clearTimeout(debounce);
         debounce = setTimeout(() => {
@@ -376,6 +500,7 @@ function createImageItem(img, filename, originalSize, listItem, order, originalF
     
     item.appendChild(removeBtn);
     item.appendChild(rotateBtn);
+    item.appendChild(cropBtn);
     item.appendChild(title);
     item.appendChild(filesize);
     item.appendChild(thumbnail);

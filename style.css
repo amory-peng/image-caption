@@ -188,3 +188,41 @@ img {
     height: auto;
     cursor: default;
 }
+
+.crop-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+#cropCanvas {
+    cursor: crosshair;
+    max-width: 90vw;
+    max-height: 80vh;
+}
+
+.crop-controls {
+    display: flex;
+    gap: 1rem;
+}
+
+.crop-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 6rem;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    background: #44aa44;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.crop-btn:hover {
+    background: #338833;
+}
